@@ -72,6 +72,17 @@ na VM: basta ajustar `GITLAB_HOST` em `infra/.env`.
    `DD_TOKEN` em `infra/.env` e execute o bootstrap novamente (ele só atualiza
    as variáveis de CI do projeto). Sem `DD_TOKEN`, o job `defectdojo` não roda.
 
+## Documentação das ferramentas
+
+Cada ferramenta usada no exemplo é explicada (o que é e como funciona) nos arquivos abaixo:
+
+- [FERRAMENTAS.md](FERRAMENTAS.md): visão geral, conceito de shift-left e política de bloqueio por branch
+- [SAST.md](SAST.md): Semgrep e Bandit
+- [SCA.md](SCA.md): Trivy (fs), pip-audit e npm audit
+- [SECRETS.md](SECRETS.md): Gitleaks, rotação e baseline
+- [IMAGEM-IAC.md](IMAGEM-IAC.md): Trivy (image), Hadolint e Checkov
+- [PLATAFORMA.md](PLATAFORMA.md): GitLab CE, Runner, Docker-in-Docker e DefectDojo
+
 ## Pipeline (`.gitlab-ci.yml`)
 
 | Estágio | Job | Ferramenta | Detecta |
