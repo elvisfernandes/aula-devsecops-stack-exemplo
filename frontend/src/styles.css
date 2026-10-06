@@ -1,0 +1,9 @@
+body { font-family: system-ui, sans-serif; background: #f4f5f7; margin: 0; }
+main { max-width: 900px; margin: 2rem auto; background: #fff; padding: 1.5rem; border-radius: 8px; }
+form, .search { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+input { padding: .4rem; }
+button { padding: .4rem .8rem; cursor: pointer; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #ddd; }
+.flash { background: #e8f4ff; padding: .5rem 1rem; margin: 0; }
+footer { margin-top: 1rem; color: #777; font-size: .85rem; }

@@ -1,0 +1,12 @@
+FROM python:3.9.5
+
+ENV DB_PASSWORD=Sup3rS3cr3t!Pass2024
+ENV AWS_ACCESS_KEY_ID=AKIAQ3EGRXYZ7K2LMN4P
+ENV AWS_SECRET_ACCESS_KEY=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
+
+WORKDIR /app
+ADD . /app
+RUN pip install -r requirements.txt
+
+EXPOSE 5000 22
+CMD ["python", "app.py"]
