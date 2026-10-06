@@ -46,3 +46,5 @@ upload "Trivy Scan"                   reports/trivy-image-backend.json  "Trivy I
 upload "Trivy Scan"                   reports/trivy-image-frontend.json "Trivy Image - frontend"
 upload "Hadolint Dockerfile check"    reports/hadolint.json             "Hadolint"
 upload "Checkov Scan"                 reports/checkov.json              "Checkov"
+upload "ZAP Scan"                     reports/zap-baseline.json         "ZAP Baseline"
+upload "ZAP Scan"                     reports/zap-api.json              "ZAP API"

@@ -10,6 +10,7 @@ Visão geral das ferramentas usadas neste exemplo de DevSecOps e onde cada uma a
 | SCA | Trivy (fs), pip-audit, npm audit | [SCA.md](SCA.md) | `sca` |
 | Secret scanning | Gitleaks | [SECRETS.md](SECRETS.md) | `secrets` |
 | Imagem e IaC | Trivy (image), Hadolint, Checkov | [IMAGEM-IAC.md](IMAGEM-IAC.md) | `build`, `image-scan`, `iac` |
+| DAST | OWASP ZAP | [DAST.md](DAST.md) | `dast` |
 | Plataforma | GitLab CE, GitLab Runner, Docker-in-Docker, DefectDojo | [PLATAFORMA.md](PLATAFORMA.md) | `report` |
 
 ## Conceito: shift-left
