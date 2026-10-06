@@ -1,0 +1,101 @@
+openapi: 3.0.3
+info:
+  title: Cadastro de sapatos
+  version: "1.0"
+  description: Descrição da API usada pelo ZAP (zap-api-scan.py) para encontrar os endpoints a testar.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/shoes:
+    get:
+      summary: Lista os sapatos (com busca opcional)
+      parameters:
+        - { name: q, in: query, schema: { type: string }, example: nike }
+      responses:
+        "200": { description: ok }
+    post:
+      summary: Cadastra um sapato
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Shoe" }
+      responses:
+        "201": { description: criado }
+  /api/shoes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer }, example: 1 }
+    get:
+      summary: Detalhe de um sapato
+      responses:
+        "200": { description: ok }
+    put:
+      summary: Atualiza um sapato
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Shoe" }
+      responses:
+        "200": { description: ok }
+  /api/shoes/import:
+    post:
+      summary: Importa sapatos a partir de um YAML
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema: { type: string }
+            example: "- {brand: Nike, model: Dunk, size: 40, color: Preto, price: 599.9, stock: 1}"
+      responses:
+        "201": { description: criado }
+  /api/shoes/{id}/checksum:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer }, example: 1 }
+    get:
+      summary: Checksum de um sapato
+      responses:
+        "200": { description: ok }
+  /api/shoes/{id}/label:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer }, example: 1 }
+    get:
+      summary: Etiqueta de um sapato
+      parameters:
+        - { name: template, in: query, schema: { type: string }, example: "{{ s.brand }}" }
+      responses:
+        "200": { description: ok }
+  /api/export:
+    get:
+      summary: Exporta um arquivo CSV
+      parameters:
+        - { name: file, in: query, schema: { type: string }, example: shoes.csv }
+      responses:
+        "200": { description: ok }
+  /api/tools/ping:
+    get:
+      summary: Resolve o endereço de um host
+      parameters:
+        - { name: host, in: query, schema: { type: string }, example: localhost }
+      responses:
+        "200": { description: ok }
+  /api/catalog:
+    get:
+      summary: Consulta o catálogo externo
+      parameters:
+        - { name: url, in: query, schema: { type: string }, example: "http://localhost" }
+        - { name: page, in: query, schema: { type: integer }, example: 1 }
+      responses:
+        "200": { description: ok }
+components:
+  schemas:
+    Shoe:
+      type: object
+      required: [brand, model, size, color, price, stock]
+      properties:
+        brand: { type: string, example: Nike }
+        model: { type: string, example: Air Force }
+        size: { type: integer, example: 41 }
+        color: { type: string, example: Branco }
+        price: { type: number, example: 599.9 }
+        stock: { type: integer, example: 3 }
