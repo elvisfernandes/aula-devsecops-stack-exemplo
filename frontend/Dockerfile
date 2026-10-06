@@ -1,12 +1,21 @@
-FROM node:20
+FROM node:20-alpine AS build
 
 WORKDIR /app
-ADD . /app
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
 RUN npm run build
 
-FROM nginx:1.18
+FROM nginxinc/nginx-unprivileged:1.29-alpine
 
-COPY --from=0 /app/dist /usr/share/nginx/html
+USER root
+RUN apk upgrade --no-cache
+
+COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+
+USER 101
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
