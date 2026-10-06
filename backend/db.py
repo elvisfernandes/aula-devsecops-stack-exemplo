@@ -34,18 +34,21 @@ def init_db(retries=30):
                 model VARCHAR(120) NOT NULL,
                 size INTEGER NOT NULL,
                 color VARCHAR(40) NOT NULL,
-                price NUMERIC(10, 2) NOT NULL
+                price NUMERIC(10, 2) NOT NULL,
+                stock INTEGER NOT NULL DEFAULT 0
             )
             """
         )
+        cur.execute("ALTER TABLE shoes ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0")
         cur.execute("SELECT COUNT(*) FROM shoes")
         if cur.fetchone()[0] == 0:
             cur.execute(
                 """
-                INSERT INTO shoes (brand, model, size, color, price) VALUES
-                ('Nike', 'Air Max 90', 42, 'Branco', 799.90),
-                ('Adidas', 'Ultraboost', 40, 'Preto', 999.90),
-                ('Puma', 'Suede Classic', 41, 'Azul', 449.90)
+                INSERT INTO shoes (brand, model, size, color, price, stock) VALUES
+                ('Nike', 'Air Max 90', 42, 'Branco', 799.90, 12),
+                ('Adidas', 'Ultraboost', 40, 'Preto', 999.90, 5),
+                ('Puma', 'Suede Classic', 41, 'Azul', 449.90, 8),
+                ('Converse', 'Chuck Taylor Limited', 39, 'Vermelho', 1299.90, 0)
                 """
             )
     conn.close()
