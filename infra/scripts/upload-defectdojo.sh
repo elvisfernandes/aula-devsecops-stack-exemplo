@@ -1,10 +1,10 @@
 #!/bin/sh
-# Envia os relat?rios gerados no pipeline para o DefectDojo.
-# Vari?veis obrigat?rias: DD_URL, DD_TOKEN. As demais v?m do GitLab CI.
+# Envia os relatórios gerados no pipeline para o DefectDojo.
+# Variáveis obrigatórias: DD_URL, DD_TOKEN. As demais vêm do GitLab CI.
 set -eu
 
-: "${DD_URL:?DD_URL n?o definido}"
-: "${DD_TOKEN:?DD_TOKEN n?o definido}"
+: "${DD_URL:?DD_URL não definido}"
+: "${DD_TOKEN:?DD_TOKEN não definido}"
 
 PRODUCT="${DD_PRODUCT_NAME:-${CI_PROJECT_NAME:-shoes-app}}"
 ENGAGEMENT="${CI_COMMIT_REF_SLUG:-local}"
@@ -15,7 +15,7 @@ upload() {
   title="$3"
 
   if [ ! -s "$file" ]; then
-    echo "[skip] $file n?o encontrado"
+    echo "[skip] $file não encontrado"
     return 0
   fi
 
