@@ -9,11 +9,14 @@ services:
     shm_size: 256m
     ports:
       - "${GITLAB_PORT:-8929}:${GITLAB_PORT:-8929}"
+      - "5050:5050"
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'http://${GITLAB_HOST:-localhost}:${GITLAB_PORT:-8929}'
         gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD:?defina GITLAB_ROOT_PASSWORD em infra/.env}'
         gitlab_rails['gitlab_signup_enabled'] = false
+        registry_external_url 'http://gitlab:5050'
+        registry['token_realm'] = 'http://gitlab:${GITLAB_PORT:-8929}'
         puma['worker_processes'] = 0
         sidekiq['concurrency'] = 10
         prometheus_monitoring['enable'] = false
