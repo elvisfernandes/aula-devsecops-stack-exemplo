@@ -32,5 +32,5 @@
 
 ```
 commit -> GitLab -> Runner -> [Semgrep, Bandit | Trivy fs, pip-audit, npm audit | Gitleaks
-          | build (dind) -> Trivy image, Hadolint, Checkov] -> relatórios -> DefectDojo
+          | build (dind) -> Trivy image, Hadolint, Checkov | ZAP (DAST)] -> relatórios -> DefectDojo
 ```
