@@ -6,7 +6,7 @@ set -eu
 : "${DD_URL:?DD_URL não definido}"
 : "${DD_TOKEN:?DD_TOKEN não definido}"
 
-PRODUCT="${DD_PRODUCT_NAME:-${CI_PROJECT_NAME:-shoes-app}}"
+PRODUCT="${DD_PRODUCT_NAME:-${CI_PROJECT_NAME:-aula-devsecops-stack-exemplo}}"
 ENGAGEMENT="${CI_COMMIT_REF_SLUG:-local}"
 
 upload() {
