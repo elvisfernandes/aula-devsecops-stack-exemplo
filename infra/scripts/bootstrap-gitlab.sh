@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sobe GitLab CE + Runner (docker executor com dind), cria o projeto,
-# registra o runner, configura as variaveis de CI e envia todos os branches.
+# registra o runner, configura as vari?veis de CI e envia todos os branches.
 # Execute a partir de qualquer pasta, no mesmo host em que o GitLab roda.
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
@@ -21,13 +21,13 @@ TOKEN_FILE="infra/.gitlab-token"
 echo "==> Subindo GitLab e Runner"
 $COMPOSE up -d
 
-echo "==> Aguardando o GitLab ficar disponivel (pode levar de 3 a 10 minutos)"
+echo "==> Aguardando o GitLab ficar dispon?vel (pode levar de 3 a 10 minutos)"
 for _ in $(seq 1 120); do
   code=$(curl -s -o /dev/null -w '%{http_code}' "$GL_URL/users/sign_in" || true)
   [ "$code" = "200" ] && break
   sleep 10
 done
-[ "$code" = "200" ] || { echo "GitLab nao respondeu a tempo"; exit 1; }
+[ "$code" = "200" ] || { echo "GitLab n?o respondeu a tempo"; exit 1; }
 
 api() {
   curl -sS --fail-with-body -H "PRIVATE-TOKEN: $PAT" "$@"
@@ -71,11 +71,11 @@ if ! docker exec gitlab-runner grep -q '\[\[runners\]\]' /etc/gitlab-runner/conf
     --docker-network-mode devsecops \
     --docker-volumes /cache
 else
-  echo "    runner ja registrado"
+  echo "    runner j? registrado"
 fi
 
 if [ -n "${DD_TOKEN:-}" ]; then
-  echo "==> Configurando variaveis DD_URL e DD_TOKEN no projeto"
+  echo "==> Configurando vari?veis DD_URL e DD_TOKEN no projeto"
   for pair in "DD_URL:${DD_URL}:false" "DD_TOKEN:${DD_TOKEN}:true"; do
     key="${pair%%:*}"; rest="${pair#*:}"; masked="${rest##*:}"; value="${rest%:*}"
     api -o /dev/null -X DELETE "$GL_URL/api/v4/projects/${PROJECT_ID}/variables/${key}" 2>/dev/null || true
@@ -83,7 +83,7 @@ if [ -n "${DD_TOKEN:-}" ]; then
       --data "key=${key}" --data-urlencode "value=${value}" --data "masked=${masked}"
   done
 else
-  echo "==> DD_TOKEN vazio: o envio ao DefectDojo ficara desativado no pipeline"
+  echo "==> DD_TOKEN vazio: o envio ao DefectDojo ficar? desativado no pipeline"
 fi
 
 echo "==> Enviando branches"
@@ -93,4 +93,4 @@ git push "$REMOTE" --all
 
 echo
 echo "Pronto: $GL_URL/root/${GITLAB_PROJECT}"
-echo "Usuario: root | Senha: definida em GITLAB_ROOT_PASSWORD (infra/.env)"
+echo "Usu?rio: root | Senha: definida em GITLAB_ROOT_PASSWORD (infra/.env)"
