@@ -18,8 +18,8 @@ CORS(app, origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(
 
 logger = logging.getLogger(__name__)
 
-COLUMNS = ("id", "brand", "model", "size", "color", "price")
-SELECT = "SELECT id, brand, model, size, color, price FROM shoes"
+COLUMNS = ("id", "brand", "model", "size", "color", "price", "stock")
+SELECT = "SELECT id, brand, model, size, color, price, stock FROM shoes"
 HOSTNAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 
 
@@ -59,7 +59,7 @@ def health():
 @app.route("/api/shoes", methods=["GET"])
 def list_shoes():
     like = f"%{request.args.get('q', '')}%"
-    rows = query(f"{SELECT} WHERE brand ILIKE %s OR model ILIKE %s ORDER BY id", (like, like))
+    rows = query(f"{SELECT} WHERE stock > 0 AND (brand ILIKE %s OR model ILIKE %s) ORDER BY id", (like, like))
     return jsonify([row_to_dict(r) for r in rows])
 
 
@@ -75,9 +75,9 @@ def get_shoe(id):
 def create_shoe():
     d = request.get_json()
     row = query(
-        "INSERT INTO shoes (brand, model, size, color, price) VALUES (%s, %s, %s, %s, %s) "
-        "RETURNING id, brand, model, size, color, price",
-        (d["brand"], d["model"], d["size"], d["color"], d["price"]),
+        "INSERT INTO shoes (brand, model, size, color, price, stock) VALUES (%s, %s, %s, %s, %s, %s) "
+        "RETURNING id, brand, model, size, color, price, stock",
+        (d["brand"], d["model"], d["size"], d["color"], d["price"], d["stock"]),
         "one",
     )
     return jsonify(row_to_dict(row)), 201
@@ -87,9 +87,9 @@ def create_shoe():
 def update_shoe(id):
     d = request.get_json()
     row = query(
-        "UPDATE shoes SET brand = %s, model = %s, size = %s, color = %s, price = %s "
-        "WHERE id = %s RETURNING id, brand, model, size, color, price",
-        (d["brand"], d["model"], d["size"], d["color"], d["price"], id),
+        "UPDATE shoes SET brand = %s, model = %s, size = %s, color = %s, price = %s, stock = %s "
+        "WHERE id = %s RETURNING id, brand, model, size, color, price, stock",
+        (d["brand"], d["model"], d["size"], d["color"], d["price"], d["stock"], id),
         "one",
     )
     if row is None:
@@ -108,8 +108,8 @@ def import_shoes():
     items = yaml.safe_load(request.data)
     for d in items:
         query(
-            "INSERT INTO shoes (brand, model, size, color, price) VALUES (%s, %s, %s, %s, %s)",
-            (d["brand"], d["model"], d["size"], d["color"], d["price"]),
+            "INSERT INTO shoes (brand, model, size, color, price, stock) VALUES (%s, %s, %s, %s, %s, %s)",
+            (d["brand"], d["model"], d["size"], d["color"], d["price"], d["stock"]),
             None,
         )
     return jsonify(imported=len(items)), 201
