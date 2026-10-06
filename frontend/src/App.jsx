@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { buildShoe, createShoe, deleteShoe, listShoes, updateShoe } from "./api.js";
 
-const EMPTY = { brand: "", model: "", size: 40, color: "", price: "" };
+const EMPTY = { brand: "", model: "", size: 40, color: "", price: "", stock: 1 };
 
 function parsePrice(value) {
   const price = Number(String(value).replace(",", "."));
@@ -61,6 +61,7 @@ export default function App() {
         <input name="size" type="number" placeholder="Tamanho" value={form.size} onChange={onChange} required />
         <input name="color" placeholder="Cor" value={form.color} onChange={onChange} required />
         <input name="price" placeholder="Preço" value={form.price} onChange={onChange} required />
+        <input name="stock" type="number" min="0" placeholder="Estoque" value={form.stock} onChange={onChange} required />
         <button type="submit">{editingId ? "Atualizar" : "Cadastrar"}</button>
         {editingId && (
           <button type="button" onClick={() => { setEditingId(null); setForm(EMPTY); }}>
@@ -86,7 +87,7 @@ export default function App() {
       <table>
         <thead>
           <tr>
-            <th>ID</th><th>Marca</th><th>Modelo</th><th>Tamanho</th><th>Cor</th><th>Preço</th><th>Ações</th>
+            <th>ID</th><th>Marca</th><th>Modelo</th><th>Tamanho</th><th>Cor</th><th>Preço</th><th>Estoque</th><th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -98,6 +99,7 @@ export default function App() {
               <td>{s.size}</td>
               <td>{s.color}</td>
               <td>R$ {Number(s.price).toFixed(2)}</td>
+              <td>{s.stock}</td>
               <td>
                 <button onClick={() => onEdit(s)}>Editar</button>
                 <button onClick={() => onDelete(s.id)}>Excluir</button>
