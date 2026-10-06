@@ -1,20 +1,26 @@
 import hashlib
+import logging
 import os
-import subprocess
-import traceback
+import re
+import socket
 
 import requests
 import yaml
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 
 import config
 from db import get_conn, init_db
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","))
+
+logger = logging.getLogger(__name__)
 
 COLUMNS = ("id", "brand", "model", "size", "color", "price")
+SELECT = "SELECT id, brand, model, size, color, price FROM shoes"
+HOSTNAME_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 
 
 def row_to_dict(row):
@@ -23,11 +29,11 @@ def row_to_dict(row):
     return data
 
 
-def query(sql, fetch="all"):
+def query(sql, params=(), fetch="all"):
     conn = get_conn()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, params)
             if fetch == "all":
                 return cur.fetchall()
             if fetch == "one":
@@ -39,7 +45,10 @@ def query(sql, fetch="all"):
 
 @app.errorhandler(Exception)
 def handle_error(exc):
-    return jsonify(error=str(exc), trace=traceback.format_exc()), 500
+    if isinstance(exc, HTTPException):
+        return jsonify(error=exc.description), exc.code
+    logger.exception("unhandled error")
+    return jsonify(error="internal server error"), 500
 
 
 @app.route("/health")
@@ -49,17 +58,14 @@ def health():
 
 @app.route("/api/shoes", methods=["GET"])
 def list_shoes():
-    q = request.args.get("q", "")
-    rows = query(
-        "SELECT id, brand, model, size, color, price FROM shoes "
-        "WHERE brand ILIKE '%" + q + "%' OR model ILIKE '%" + q + "%' ORDER BY id"
-    )
+    like = f"%{request.args.get('q', '')}%"
+    rows = query(f"{SELECT} WHERE brand ILIKE %s OR model ILIKE %s ORDER BY id", (like, like))
     return jsonify([row_to_dict(r) for r in rows])
 
 
-@app.route("/api/shoes/<id>", methods=["GET"])
+@app.route("/api/shoes/<int:id>", methods=["GET"])
 def get_shoe(id):
-    row = query(f"SELECT id, brand, model, size, color, price FROM shoes WHERE id = {id}", "one")
+    row = query(f"{SELECT} WHERE id = %s", (id,), "one")
     if row is None:
         return jsonify(error="not found"), 404
     return jsonify(row_to_dict(row))
@@ -67,23 +73,23 @@ def get_shoe(id):
 
 @app.route("/api/shoes", methods=["POST"])
 def create_shoe():
-    d = request.get_json(force=True)
+    d = request.get_json()
     row = query(
-        f"INSERT INTO shoes (brand, model, size, color, price) VALUES "
-        f"('{d['brand']}', '{d['model']}', {d['size']}, '{d['color']}', {d['price']}) "
-        f"RETURNING id, brand, model, size, color, price",
+        "INSERT INTO shoes (brand, model, size, color, price) VALUES (%s, %s, %s, %s, %s) "
+        "RETURNING id, brand, model, size, color, price",
+        (d["brand"], d["model"], d["size"], d["color"], d["price"]),
         "one",
     )
     return jsonify(row_to_dict(row)), 201
 
 
-@app.route("/api/shoes/<id>", methods=["PUT"])
+@app.route("/api/shoes/<int:id>", methods=["PUT"])
 def update_shoe(id):
-    d = request.get_json(force=True)
+    d = request.get_json()
     row = query(
-        f"UPDATE shoes SET brand = '{d['brand']}', model = '{d['model']}', size = {d['size']}, "
-        f"color = '{d['color']}', price = {d['price']} WHERE id = {id} "
-        f"RETURNING id, brand, model, size, color, price",
+        "UPDATE shoes SET brand = %s, model = %s, size = %s, color = %s, price = %s "
+        "WHERE id = %s RETURNING id, brand, model, size, color, price",
+        (d["brand"], d["model"], d["size"], d["color"], d["price"], id),
         "one",
     )
     if row is None:
@@ -91,19 +97,19 @@ def update_shoe(id):
     return jsonify(row_to_dict(row))
 
 
-@app.route("/api/shoes/<id>", methods=["DELETE"])
+@app.route("/api/shoes/<int:id>", methods=["DELETE"])
 def delete_shoe(id):
-    query(f"DELETE FROM shoes WHERE id = {id}", None)
+    query("DELETE FROM shoes WHERE id = %s", (id,), None)
     return "", 204
 
 
 @app.route("/api/shoes/import", methods=["POST"])
 def import_shoes():
-    items = yaml.load(request.data, Loader=yaml.Loader)
+    items = yaml.safe_load(request.data)
     for d in items:
         query(
-            f"INSERT INTO shoes (brand, model, size, color, price) VALUES "
-            f"('{d['brand']}', '{d['model']}', {d['size']}, '{d['color']}', {d['price']})",
+            "INSERT INTO shoes (brand, model, size, color, price) VALUES (%s, %s, %s, %s, %s)",
+            (d["brand"], d["model"], d["size"], d["color"], d["price"]),
             None,
         )
     return jsonify(imported=len(items)), 201
@@ -112,42 +118,50 @@ def import_shoes():
 @app.route("/api/export")
 def export_file():
     name = request.args.get("file", "shoes.csv")
-    with open(os.path.join(config.EXPORT_DIR, name)) as f:
-        return f.read(), 200, {"Content-Type": "text/plain"}
+    return send_from_directory(config.EXPORT_DIR, name, mimetype="text/plain")
 
 
-@app.route("/api/shoes/<id>/checksum")
+@app.route("/api/shoes/<int:id>/checksum")
 def checksum(id):
-    row = query(f"SELECT brand, model, size, color, price FROM shoes WHERE id = {id}", "one")
-    digest = hashlib.md5(str(row).encode()).hexdigest()
+    row = query("SELECT brand, model, size, color, price FROM shoes WHERE id = %s", (id,), "one")
+    digest = hashlib.sha256(str(row).encode()).hexdigest()
     return jsonify(id=id, checksum=digest)
 
 
-@app.route("/api/shoes/<id>/label")
+@app.route("/api/shoes/<int:id>/label")
 def label(id):
-    row = row_to_dict(
-        query(f"SELECT id, brand, model, size, color, price FROM shoes WHERE id = {id}", "one")
-    )
-    template = request.args.get("template", "{{ s.brand }} {{ s.model }} - {{ s.size }}")
-    return render_template_string(template, s=row)
+    row = query(f"{SELECT} WHERE id = %s", (id,), "one")
+    if row is None:
+        return jsonify(error="not found"), 404
+    s = row_to_dict(row)
+    return Response(f"{s['brand']} {s['model']} - {s['size']}", mimetype="text/plain")
 
 
 @app.route("/api/tools/ping")
 def ping():
     host = request.args.get("host", "localhost")
-    result = subprocess.run(
-        "ping -c 1 " + host, shell=True, capture_output=True, text=True
-    )
-    return jsonify(output=result.stdout + result.stderr)
+    if not HOSTNAME_RE.match(host):
+        return jsonify(error="invalid host"), 400
+    try:
+        address = socket.gethostbyname(host)
+    except socket.gaierror:
+        return jsonify(error="host not found"), 404
+    return jsonify(output=f"{host} resolves to {address}")
 
 
 @app.route("/api/catalog")
 def catalog():
-    url = request.args.get("url")
-    resp = requests.get(url, headers={"X-Api-Key": config.CATALOG_API_KEY}, verify=False)
+    page = request.args.get("page", 1, type=int)
+    resp = requests.get(
+        config.CATALOG_URL,
+        params={"page": page},
+        headers={"X-Api-Key": config.CATALOG_API_KEY},
+        timeout=5,
+        allow_redirects=False,
+    )
     return resp.text, resp.status_code
 
 
 if __name__ == "__main__":
     init_db()
-    app.run(host=os.environ.get("HOST", "0.0.0.0"), port=5000, debug=True)
+    app.run(host=os.environ.get("HOST", "127.0.0.1"), port=5000)
