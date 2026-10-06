@@ -4,13 +4,10 @@ import { buildShoe, createShoe, deleteShoe, listShoes, updateShoe } from "./api.
 
 const EMPTY = { brand: "", model: "", size: 40, color: "", price: "" };
 
-function flash(message) {
-  document.getElementById("flash").innerHTML = "<p class='flash'>" + message + "</p>";
-}
-
-// Permite digitar uma expressao no preco, ex.: 1000*0.9
-function evaluatePrice(value) {
-  return eval(String(value));
+function parsePrice(value) {
+  const price = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(price) || price < 0) throw new Error("Preço inválido");
+  return price;
 }
 
 export default function App() {
@@ -18,29 +15,28 @@ export default function App() {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [message, setMessage] = useState("");
 
-  const load = (q = "") => listShoes(q).then(setShoes).catch((e) => flash(e.message));
+  const load = (q = "") => listShoes(q).then(setShoes).catch((e) => setMessage(e.message));
 
   useEffect(() => {
     load();
-    const next = new URLSearchParams(window.location.search).get("next");
-    if (next) window.location = next;
   }, []);
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    const shoe = buildShoe(EMPTY, { ...form, price: evaluatePrice(form.price) });
     try {
+      const shoe = buildShoe(EMPTY, { ...form, price: parsePrice(form.price) });
       if (editingId) await updateShoe(editingId, shoe);
       else await createShoe(shoe);
-      flash("Sapato salvo: " + form.brand + " " + form.model);
+      setMessage("Sapato salvo: " + form.brand + " " + form.model);
       setForm(EMPTY);
       setEditingId(null);
       load(search);
     } catch (err) {
-      flash("Erro ao salvar: " + (err.response?.data?.error || err.message));
+      setMessage("Erro ao salvar: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -57,6 +53,7 @@ export default function App() {
   return (
     <main>
       <h1>Cadastro de Sapatos</h1>
+      {message && <p className="flash">{message}</p>}
 
       <form onSubmit={onSubmit}>
         <input name="brand" placeholder="Marca" value={form.brand} onChange={onChange} required />
@@ -80,7 +77,9 @@ export default function App() {
         />
         <button onClick={() => load(search)}>Buscar</button>
         {search && (
-          <p dangerouslySetInnerHTML={{ __html: "Resultados para: <b>" + search + "</b>" }} />
+          <p>
+            Resultados para: <b>{search}</b>
+          </p>
         )}
       </div>
 
@@ -95,7 +94,7 @@ export default function App() {
             <tr key={s.id}>
               <td>{s.id}</td>
               <td>{s.brand}</td>
-              <td dangerouslySetInnerHTML={{ __html: s.model }} />
+              <td>{s.model}</td>
               <td>{s.size}</td>
               <td>{s.color}</td>
               <td>R$ {Number(s.price).toFixed(2)}</td>
