@@ -7,6 +7,7 @@ stages:
   - iac
   - dast
   - report
+  - publish
 
 variables:
   GIT_DEPTH: "0"
@@ -189,3 +190,23 @@ defectdojo:
       when: always
   script:
     - sh infra/scripts/upload-defectdojo.sh
+
+# --------------------------------------------------------------- PUBLISH
+# Publica as imagens no Container Registry do GitLab. Fica no último estágio:
+# só executa se todos os jobs bloqueantes anteriores passaram.
+publish-images:
+  stage: publish
+  image: docker:27
+  services:
+    - name: docker:27-dind
+      command: ["--insecure-registry=gitlab:5050"]
+  dependencies: [build-images]
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker load -i images/backend.tar
+    - docker load -i images/frontend.tar
+    - |
+      for svc in backend frontend; do
+        docker tag shoes-$svc:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA
+        docker push $CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA
+      done
