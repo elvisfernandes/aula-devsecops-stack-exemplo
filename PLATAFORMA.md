@@ -26,7 +26,7 @@
 - **Deduplica** achados repetidos entre execuções e acompanha o ciclo de vida (Active, Mitigated, False Positive, Risk Accepted).
 - Oferece métricas, SLAs e integração com Jira.
 
-**Neste projeto:** o job `defectdojo` (sempre executado, quando `DD_URL` e `DD_TOKEN` existem) chama [infra/scripts/upload-defectdojo.sh](infra/scripts/upload-defectdojo.sh), que envia cada relatório com `reimport-scan` e `auto_create_context`. O engagement recebe o nome do branch e cada teste, o da ferramenta; assim dá para comparar `main` com os `fix/*` e ver os findings passarem para Mitigated.
+**Neste projeto:** o job `defectdojo` (sempre executado, quando `DD_URL` e `DD_TOKEN` existem) chama [infra/scripts/upload-defectdojo.sh](infra/scripts/upload-defectdojo.sh), que envia cada relatório com `reimport-scan` e `auto_create_context`. O engagement recebe o nome do branch e cada teste, o da ferramenta; assim dá para comparar `scans` com os `fix/*` e ver os findings passarem para Mitigated.
 
 ## Fluxo completo
 
@@ -34,3 +34,7 @@
 commit -> GitLab -> Runner -> [Semgrep, Bandit | Trivy fs, pip-audit, npm audit | Gitleaks
           | build (dind) -> Trivy image, Hadolint, Checkov | ZAP (DAST)] -> relatórios -> DefectDojo
 ```
+
+## Container Registry
+
+O GitLab CE do exemplo habilita o Container Registry em `gitlab:5050` (HTTP, sem TLS, apenas para demonstração). O serviço dind do job `publish-images` usa `--insecure-registry=gitlab:5050` e o login é feito com `CI_REGISTRY_USER` e `CI_REGISTRY_PASSWORD` (token do job). As imagens ficam em *Deploy > Container Registry* do projeto.

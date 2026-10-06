@@ -89,24 +89,40 @@ Cada ferramenta usada no exemplo é explicada (o que é e como funciona) nos arq
 
 ## Pipeline (`.gitlab-ci.yml`)
 
+O pipeline evolui junto com os branches:
+
+- **`main`:** apenas `build-images` e `publish-images`. Não há nenhuma verificação de segurança: tudo que compila é publicado, e não existe ponto do pipeline em que seja possível **exigir** algum controle.
+- **`scans` e seguintes:** o pipeline ganha as verificações abaixo. No `scans` todas são informativas (`allow_failure: true`); a cada branch `fix/*`, uma categoria passa a bloquear.
+
 | Estágio | Job | Ferramenta | Detecta |
 |---------|-----|------------|---------|
 | sast | `semgrep`, `bandit` | Semgrep, Bandit | SQL injection, XSS, `eval`, `shell=True`, SSRF, path traversal, hash fraco, debug ligado... |
 | sca | `trivy-fs`, `pip-audit`, `npm-audit` | Trivy, pip-audit, npm audit | Dependências Python e npm com CVEs |
 | secrets | `gitleaks` | Gitleaks | Segredos no código **e no histórico git** |
-| build | `build-images` | Docker (dind) | Constrói as imagens |
+| build | `build-images` | Docker (dind) | Constrói as imagens (presente desde a `main`) |
 | image-scan | `trivy-image-*` | Trivy | CVEs do SO/pacotes e segredos nas camadas da imagem |
 | iac | `hadolint`, `checkov` | Hadolint, Checkov | Más práticas nos Dockerfiles |
 | dast | `zap-dast` | OWASP ZAP | Injeções, headers ausentes e vazamento de informação na aplicação em execução |
 | report | `defectdojo` | API do DefectDojo | Importa todos os relatórios (`reimport-scan`) |
+| publish | `publish-images` | Container Registry do GitLab | Publica as imagens (presente desde a `main`) |
 
 Cada branch vira um *engagement* no DefectDojo e cada ferramenta um *test*,
 o que permite comparar a evolução entre os branches.
 
+### Publicação das imagens
+
+O job `publish-images` envia as imagens ao Container Registry do GitLab
+(`gitlab:5050`, habilitado em [infra/gitlab/docker-compose.yml](infra/gitlab/docker-compose.yml)),
+com a tag do commit. Na `main` ele roda sem nenhuma verificação antes. A partir do
+`scans`, o estágio `publish` é o último: se um job bloqueante falhar, a imagem
+**não é publicada**. É isso que torna os controles de segurança obrigatórios.
+
 ### Jobs bloqueantes
 
-Na `main` todos os jobs usam `allow_failure: true` (o pipeline termina em
-"passed with warnings"). O job `zap-dast` (DAST) é sempre informativo, pois exige triagem de falsos positivos. A cada branch de correção, os jobs da categoria
+Na `main` não há o que bloquear. No `scans` todos os jobs de segurança usam
+`allow_failure: true` (o pipeline termina em "passed with warnings" e publica
+a imagem mesmo com problemas). O job `zap-dast` (DAST) é sempre informativo, pois exige
+triagem de falsos positivos. A cada branch de correção, os jobs da categoria
 corrigida **perdem** o `allow_failure` e passam a bloquear o pipeline: o merge
 só é possível se a categoria estiver limpa. Esse é o ponto central do shift-left.
 
@@ -115,13 +131,14 @@ só é possível se a categoria estiver limpa. Esse é o ponto central do shift-
 Os branches são incrementais:
 
 ```
-main -> fix/sast -> fix/sca -> fix/secrets -> fix/image -> fixed
+main -> scans -> fix/sast -> fix/sca -> fix/secrets -> fix/image -> fixed
 ```
 
 | Branch | O que corrige | Como demonstrar |
 |--------|---------------|-----------------|
-| `main` | nada (aplicação vulnerável) | Rode o pipeline, mostre os relatórios e explore a app (ex.: `?q=%' OR 1=1 --`, `/api/tools/ping?host=localhost;id`) |
-| `fix/sast` | Queries parametrizadas, `yaml.safe_load`, `shell=True` removido, SHA-256, path traversal, SSRF, SSTI, `debug` e CORS, XSS/`eval` no React | `git diff main..fix/sast`; jobs `semgrep` e `bandit` passam |
+| `main` | nada (aplicação vulnerável, pipeline só com build e publicação) | Rode o pipeline: ele passa e publica a imagem sem nenhum controle. Explore a app (ex.: `?q=%' OR 1=1 --`, `/api/tools/ping?host=localhost;id`) e mostre que o pipeline não permite exigir segurança |
+| `scans` | nada no código; adiciona SAST, SCA, secrets, image scan, IaC e DAST ao pipeline, todos informativos | `git diff main..scans` mostra só o pipeline. Rode-o: os relatórios aparecem (e no DefectDojo), mas o pipeline passa e publica |
+| `fix/sast` | Queries parametrizadas, `yaml.safe_load`, `shell=True` removido, SHA-256, path traversal, SSRF, SSTI, `debug` e CORS, XSS/`eval` no React | `git diff scans..fix/sast`; jobs `semgrep` e `bandit` passam |
 | `fix/sca` | Dependências atualizadas (`requirements.txt`, `package.json` e lockfile) | Jobs `trivy-fs`, `pip-audit` e `npm-audit` passam |
 | `fix/secrets` | Segredos movidos para variáveis de ambiente, `.env` removido do git, `.env.example`, baseline do Gitleaks | Veja a seção abaixo |
 | `fix/image` | Imagens base atuais, multi-stage, usuário não-root, `COPY`, `HEALTHCHECK`, gunicorn | Jobs `trivy-image-*`, `hadolint` e `checkov` passam |
