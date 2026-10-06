@@ -1,10 +1,7 @@
 import axios from "axios";
 import _ from "lodash";
 
-const api = axios.create({
-  baseURL: "/api",
-  headers: { "X-Api-Key": "glpat-4Vx9KqL2mZr7TbN3cYwH" },
-});
+const api = axios.create({ baseURL: "/api" });
 
 export const listShoes = (q = "") =>
   api.get("/shoes", { params: { q } }).then((r) => r.data);
