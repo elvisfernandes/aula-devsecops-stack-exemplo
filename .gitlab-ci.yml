@@ -84,11 +84,11 @@ gitleaks:
     name: ghcr.io/gitleaks/gitleaks:latest
     entrypoint: [""]
   <<: *report-artifacts
-  allow_failure: true
   script:
     - mkdir -p reports
     - >
       gitleaks detect --source . --no-banner --redact --exit-code 1
+      --baseline-path .gitleaks-baseline.json
       --report-format json --report-path reports/gitleaks.json
 
 # --------------------------------------------------------------- BUILD
