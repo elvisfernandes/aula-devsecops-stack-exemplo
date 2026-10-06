@@ -1,0 +1,30 @@
+rules:
+  - id: shoes.react-dangerously-set-inner-html
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      dangerouslySetInnerHTML injeta HTML sem sanitizacao (XSS). Renderize o valor como texto.
+    metadata:
+      cwe: ["CWE-79: Improper Neutralization of Input During Web Page Generation"]
+      category: security
+    pattern: <$EL dangerouslySetInnerHTML=... />
+
+  - id: shoes.js-eval
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      eval() executa codigo arbitrario (injecao de codigo). Faca o parse do valor com Number/parseFloat.
+    metadata:
+      cwe: ["CWE-95: Eval Injection"]
+      category: security
+    pattern: eval(...)
+
+  - id: shoes.js-innerhtml-assignment
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Atribuicao a innerHTML com dados dinamicos (XSS). Use textContent.
+    metadata:
+      cwe: ["CWE-79: Improper Neutralization of Input During Web Page Generation"]
+      category: security
+    pattern: $EL.innerHTML = ...

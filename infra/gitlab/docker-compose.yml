@@ -1,0 +1,46 @@
+name: devsecops-gitlab
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:17.11.7-ce.0
+    container_name: gitlab
+    hostname: gitlab
+    restart: unless-stopped
+    shm_size: 256m
+    ports:
+      - "${GITLAB_PORT:-8929}:${GITLAB_PORT:-8929}"
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://${GITLAB_HOST:-localhost}:${GITLAB_PORT:-8929}'
+        gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD:?defina GITLAB_ROOT_PASSWORD em infra/.env}'
+        gitlab_rails['gitlab_signup_enabled'] = false
+        puma['worker_processes'] = 0
+        sidekiq['concurrency'] = 10
+        prometheus_monitoring['enable'] = false
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    networks:
+      - devsecops
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:v17.11.4
+    container_name: gitlab-runner
+    restart: unless-stopped
+    depends_on:
+      - gitlab
+    volumes:
+      - gitlab-runner-config:/etc/gitlab-runner
+    networks:
+      - devsecops
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+  gitlab-runner-config:
+
+networks:
+  devsecops:
+    name: devsecops

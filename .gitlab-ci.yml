@@ -38,6 +38,8 @@ semgrep:
     - >
       semgrep scan --metrics=off --error
       --config p/python --config p/flask --config p/javascript --config p/react
+      --config p/security-audit --config p/xss --config p/owasp-top-ten
+      --config semgrep/frontend.yml --exclude Dockerfile
       --json --output reports/semgrep.json backend frontend/src
 
 bandit:

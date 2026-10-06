@@ -40,7 +40,7 @@ upload "Semgrep JSON Report"          reports/semgrep.json              "Semgrep
 upload "Bandit Scan"                  reports/bandit.json               "Bandit"
 upload "Trivy Scan"                   reports/trivy-fs.json             "Trivy FS"
 upload "pip-audit Scan"               reports/pip-audit.json            "pip-audit"
-upload "NPM Audit Scan"               reports/npm-audit.json            "npm audit"
+upload "NPM Audit v7+ Scan"           reports/npm-audit.json            "npm audit"
 upload "Gitleaks Scan"                reports/gitleaks.json             "Gitleaks"
 upload "Trivy Scan"                   reports/trivy-image-backend.json  "Trivy Image - backend"
 upload "Trivy Scan"                   reports/trivy-image-frontend.json "Trivy Image - frontend"

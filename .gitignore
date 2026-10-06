@@ -1,0 +1,10 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+reports/
+images/
+infra/.env
+infra/.gitlab-token
+infra/defectdojo/django-DefectDojo/
