@@ -14,6 +14,7 @@ import config
 from db import get_conn, init_db
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 CORS(app, origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","))
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,35 @@ def handle_error(exc):
     return jsonify(error="internal server error"), 500
 
 
+def validate_shoe(d):
+    if not isinstance(d, dict):
+        return None, "corpo JSON invalido"
+    out = {}
+    for field in ("brand", "model", "color"):
+        v = d.get(field)
+        if not isinstance(v, str) or not 1 <= len(v.strip()) <= 100:
+            return None, f"{field} invalido"
+        out[field] = v.strip()
+    size = d.get("size")
+    if isinstance(size, bool) or not isinstance(size, int) or not 15 <= size <= 60:
+        return None, "size invalido"
+    out["size"] = size
+    price = d.get("price")
+    if isinstance(price, bool) or not isinstance(price, (int, float)) or not 0 < price < 100000:
+        return None, "price invalido"
+    out["price"] = price
+    return out, None
+
+
+@app.after_request
+def security_headers(resp):
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
 @app.route("/health")
 def health():
     return jsonify(status="ok")
@@ -73,7 +103,9 @@ def get_shoe(id):
 
 @app.route("/api/shoes", methods=["POST"])
 def create_shoe():
-    d = request.get_json()
+    d, err = validate_shoe(request.get_json(silent=True))
+    if err:
+        return jsonify(error=err), 400
     row = query(
         "INSERT INTO shoes (brand, model, size, color, price) VALUES (%s, %s, %s, %s, %s) "
         "RETURNING id, brand, model, size, color, price",
@@ -85,7 +117,9 @@ def create_shoe():
 
 @app.route("/api/shoes/<int:id>", methods=["PUT"])
 def update_shoe(id):
-    d = request.get_json()
+    d, err = validate_shoe(request.get_json(silent=True))
+    if err:
+        return jsonify(error=err), 400
     row = query(
         "UPDATE shoes SET brand = %s, model = %s, size = %s, color = %s, price = %s "
         "WHERE id = %s RETURNING id, brand, model, size, color, price",
@@ -106,7 +140,15 @@ def delete_shoe(id):
 @app.route("/api/shoes/import", methods=["POST"])
 def import_shoes():
     items = yaml.safe_load(request.data)
-    for d in items:
+    if not isinstance(items, list) or len(items) > 500:
+        return jsonify(error="lista invalida"), 400
+    validated = []
+    for raw in items:
+        d, err = validate_shoe(raw)
+        if err:
+            return jsonify(error=err), 400
+        validated.append(d)
+    for d in validated:
         query(
             "INSERT INTO shoes (brand, model, size, color, price) VALUES (%s, %s, %s, %s, %s)",
             (d["brand"], d["model"], d["size"], d["color"], d["price"]),
