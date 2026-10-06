@@ -13,7 +13,7 @@ rules:
     languages: [javascript, typescript]
     severity: ERROR
     message: >-
-      eval() executa c?digo arbitr?rio (inje??o de c?digo). Fa?a o parse do valor com Number/parseFloat.
+      eval() executa código arbitrário (injeção de código). Faça o parse do valor com Number/parseFloat.
     metadata:
       cwe: ["CWE-95: Eval Injection"]
       category: security
