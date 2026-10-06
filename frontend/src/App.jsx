@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import moment from "moment";
 import { buildShoe, createShoe, deleteShoe, listShoes, updateShoe } from "./api.js";
 
-const EMPTY = { brand: "", model: "", size: 40, color: "", price: "" };
+const EMPTY = { brand: "", model: "", size: 40, color: "", price: "", stock: 1 };
 
 function flash(message) {
   document.getElementById("flash").innerHTML = "<p class='flash'>" + message + "</p>";
@@ -99,6 +99,7 @@ export default function App() {
               <td>{s.size}</td>
               <td>{s.color}</td>
               <td>R$ {Number(s.price).toFixed(2)}</td>
+              <td>{s.stock}</td>
               <td>
                 <button onClick={() => onEdit(s)}>Editar</button>
                 <button onClick={() => onDelete(s.id)}>Excluir</button>

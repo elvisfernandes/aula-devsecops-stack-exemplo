@@ -14,7 +14,7 @@ from db import get_conn, init_db
 app = Flask(__name__)
 CORS(app)
 
-COLUMNS = ("id", "brand", "model", "size", "color", "price")
+COLUMNS = ("id", "brand", "model", "size", "color", "price", "stock")
 
 
 def row_to_dict(row):
@@ -51,15 +51,15 @@ def health():
 def list_shoes():
     q = request.args.get("q", "")
     rows = query(
-        "SELECT id, brand, model, size, color, price FROM shoes "
-        "WHERE brand ILIKE '%" + q + "%' OR model ILIKE '%" + q + "%' ORDER BY id"
+        "SELECT id, brand, model, size, color, price, stock FROM shoes "
+        "WHERE stock > 0 AND brand ILIKE '%" + q + "%' OR stock > 0 AND model ILIKE '%" + q + "%' ORDER BY id"
     )
     return jsonify([row_to_dict(r) for r in rows])
 
 
 @app.route("/api/shoes/<id>", methods=["GET"])
 def get_shoe(id):
-    row = query(f"SELECT id, brand, model, size, color, price FROM shoes WHERE id = {id}", "one")
+    row = query(f"SELECT id, brand, model, size, color, price, stock FROM shoes WHERE id = {id}", "one")
     if row is None:
         return jsonify(error="not found"), 404
     return jsonify(row_to_dict(row))
@@ -69,9 +69,9 @@ def get_shoe(id):
 def create_shoe():
     d = request.get_json(force=True)
     row = query(
-        f"INSERT INTO shoes (brand, model, size, color, price) VALUES "
-        f"('{d['brand']}', '{d['model']}', {d['size']}, '{d['color']}', {d['price']}) "
-        f"RETURNING id, brand, model, size, color, price",
+        f"INSERT INTO shoes (brand, model, size, color, price, stock) VALUES "
+        f"('{d['brand']}', '{d['model']}', {d['size']}, '{d['color']}', {d['price']}, {d['stock']}) "
+        f"RETURNING id, brand, model, size, color, price, stock",
         "one",
     )
     return jsonify(row_to_dict(row)), 201
@@ -82,8 +82,8 @@ def update_shoe(id):
     d = request.get_json(force=True)
     row = query(
         f"UPDATE shoes SET brand = '{d['brand']}', model = '{d['model']}', size = {d['size']}, "
-        f"color = '{d['color']}', price = {d['price']} WHERE id = {id} "
-        f"RETURNING id, brand, model, size, color, price",
+        f"color = '{d['color']}', price = {d['price']}, stock = {d['stock']} WHERE id = {id} "
+        f"RETURNING id, brand, model, size, color, price, stock",
         "one",
     )
     if row is None:
@@ -102,8 +102,8 @@ def import_shoes():
     items = yaml.load(request.data, Loader=yaml.Loader)
     for d in items:
         query(
-            f"INSERT INTO shoes (brand, model, size, color, price) VALUES "
-            f"('{d['brand']}', '{d['model']}', {d['size']}, '{d['color']}', {d['price']})",
+            f"INSERT INTO shoes (brand, model, size, color, price, stock) VALUES "
+            f"('{d['brand']}', '{d['model']}', {d['size']}, '{d['color']}', {d['price']}, {d.get('stock', 0)})",
             None,
         )
     return jsonify(imported=len(items)), 201
@@ -126,7 +126,7 @@ def checksum(id):
 @app.route("/api/shoes/<id>/label")
 def label(id):
     row = row_to_dict(
-        query(f"SELECT id, brand, model, size, color, price FROM shoes WHERE id = {id}", "one")
+        query(f"SELECT id, brand, model, size, color, price, stock FROM shoes WHERE id = {id}", "one")
     )
     template = request.args.get("template", "{{ s.brand }} {{ s.model }} - {{ s.size }}")
     return render_template_string(template, s=row)
