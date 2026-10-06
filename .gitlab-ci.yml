@@ -113,7 +113,6 @@ trivy-image-backend:
   stage: image-scan
   extends: .trivy
   needs: [build-images]
-  allow_failure: true
   script:
     - >
       trivy image --input images/backend.tar --scanners vuln,secret
@@ -124,7 +123,6 @@ trivy-image-frontend:
   stage: image-scan
   extends: .trivy
   needs: [build-images]
-  allow_failure: true
   script:
     - >
       trivy image --input images/frontend.tar --scanners vuln,secret
@@ -138,7 +136,6 @@ hadolint:
     name: hadolint/hadolint:latest-debian
     entrypoint: [""]
   <<: *report-artifacts
-  allow_failure: true
   script:
     - mkdir -p reports
     - >
@@ -151,7 +148,6 @@ checkov:
     name: bridgecrew/checkov:latest
     entrypoint: [""]
   <<: *report-artifacts
-  allow_failure: true
   script:
     - mkdir -p reports
     - checkov -d . --framework dockerfile --quiet -o json > reports/checkov.json
