@@ -163,3 +163,66 @@ docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep semgrep scan --config p/p
 - Os tokens e segredos presentes neste repositório são fictícios.
 - Dentro do runner, o DefectDojo é acessado por `http://defectdojo:8080` (o
   script `setup.sh` conecta o DefectDojo à rede Docker `devsecops`).
+
+## Vulnerabilidades da aplicação
+
+Lista das vulnerabilidades presentes na `main` e o branch em que cada uma é corrigida
+(os branches são incrementais: cada um contém as correções dos anteriores).
+
+### SAST (corrigidas em `fix/sast`)
+
+| # | Vulnerabilidade | Onde |
+|---|-----------------|------|
+| 1 | SQL injection (concatenação de strings em queries) | `backend/app.py`: busca, `GET/PUT/DELETE /api/shoes/<id>`, criação, atualização e importação |
+| 2 | Desserialização insegura (`yaml.load` com `yaml.Loader`) | `POST /api/shoes/import` |
+| 3 | Path traversal | `GET /api/export?file=` |
+| 4 | Hash fraco (MD5) | `GET /api/shoes/<id>/checksum` |
+| 5 | Server-Side Template Injection (`render_template_string` com entrada do usuário) | `GET /api/shoes/<id>/label?template=` |
+| 6 | Command injection (`subprocess` com `shell=True`) | `GET /api/tools/ping?host=` |
+| 7 | SSRF e validação de certificado TLS desabilitada (`verify=False`) | `GET /api/catalog?url=` |
+| 8 | Vazamento de informação (stack trace na resposta de erro) | handler de exceções |
+| 9 | Flask em modo `debug=True` (console do Werkzeug) e escutando em `0.0.0.0` | `app.run(...)` |
+| 10 | CORS aberto para qualquer origem | `CORS(app)` |
+| 11 | XSS via `dangerouslySetInnerHTML` (busca e modelo do sapato) | `frontend/src/App.jsx` |
+| 12 | XSS via `innerHTML` (mensagem de feedback) | `frontend/src/App.jsx` |
+| 13 | Execução de código com `eval` no campo de preço | `frontend/src/App.jsx` |
+| 14 | Open redirect (`?next=`) | `frontend/src/App.jsx` |
+
+### SCA (corrigidas em `fix/sca`)
+
+| # | Vulnerabilidade | Onde |
+|---|-----------------|------|
+| 15 | Dependências Python com CVEs conhecidos: Flask 1.1.2, Werkzeug 1.0.1, Jinja2 2.11.2, PyYAML 5.3.1, requests 2.25.1, urllib3 1.26.5, gunicorn 20.0.4, entre outras | `backend/requirements.txt` |
+| 16 | Dependências npm com CVEs conhecidos: axios 0.21.1, lodash 4.17.15 (prototype pollution via `_.merge`), moment 2.29.1, vite 4.2.0 | `frontend/package.json` e `package-lock.json` |
+
+### Secrets (corrigidas em `fix/secrets`)
+
+| # | Vulnerabilidade | Onde |
+|---|-----------------|------|
+| 17 | Senha do banco hardcoded | `backend/config.py` |
+| 18 | Chaves AWS hardcoded | `backend/config.py` |
+| 19 | Token do GitLab hardcoded (backend) | `backend/config.py` |
+| 20 | Token do GitLab hardcoded (frontend, exposto no bundle JS) | `frontend/src/api.js` |
+| 21 | Arquivo `.env` versionado (senha do Postgres e chave do Stripe) | raiz do repositório |
+| 22 | Chave do Stripe em arquivo já removido, visível só no histórico git | commit inicial |
+
+### Imagem e IaC (corrigidas em `fix/image`)
+
+| # | Vulnerabilidade | Onde |
+|---|-----------------|------|
+| 23 | Imagem base desatualizada com CVEs de SO (`python:3.11.4`, `nginx:1.18`) | `backend/Dockerfile`, `frontend/Dockerfile` |
+| 24 | Segredos em instruções `ENV` do Dockerfile | `backend/Dockerfile` |
+| 25 | Container executando como root | Dockerfiles |
+| 26 | Uso de `ADD` em vez de `COPY`, cache do pip na imagem e sem build multi-stage | Dockerfiles |
+| 27 | Porta 22 exposta sem necessidade | `backend/Dockerfile` |
+| 28 | Ausência de `HEALTHCHECK` | Dockerfiles |
+| 29 | Servidor de desenvolvimento do Flask em vez de gunicorn | `backend/Dockerfile` |
+
+### Hardening (corrigidas em `fixed`)
+
+| # | Vulnerabilidade | Onde |
+|---|-----------------|------|
+| 30 | Ausência de validação de entrada na API | `backend/app.py` |
+| 31 | Ausência de headers de segurança (CSP, `X-Frame-Options`, `nosniff`...) | Flask e nginx |
+| 32 | Portas do Postgres (5432) e da API (5000) publicadas no host | `docker-compose.yml` |
+| 33 | Banco na mesma rede do frontend, containers com sistema de arquivos gravável, com todas as capabilities e sem limites de recursos | `docker-compose.yml` |
