@@ -208,14 +208,17 @@ Planejar -> Codificar -> Commit -> Build -> Testar -> Release -> Implantar -> Op
 
 | Branch | Etapa demonstrada | Resultado no pipeline |
 |--------|-------------------|-----------------------|
-| `main` | Ponto de partida: tudo vulnerável, scans informativos | Pipeline passa, mas todos os scanners reportam problemas |
+| `main` | Ponto de partida: aplicação vulnerável e pipeline sem verificações | Só build e publicação. Pipeline passa e nada pode ser exigido |
+| `scans` | Verificações adicionadas em modo informativo | Pipeline passa e publica, mas todos os scanners reportam problemas |
 | `fix/sast` | Codificação segura | Semgrep e Bandit passam e bloqueiam |
 | `fix/sca` | Cadeia de suprimentos | Trivy fs, pip-audit e npm audit passam e bloqueiam |
 | `fix/secrets` | Repositório e credenciais | Gitleaks passa (com baseline) e bloqueia |
 | `fix/image` | Empacotamento e IaC | Trivy image, Hadolint e Checkov passam e bloqueiam |
 | `fixed` | Defesa em profundidade e operação | Tudo bloqueante, com validação, headers e hardening do ambiente. O DAST continua informativo e reporta bem menos alertas |
 
-O job `zap-dast` roda em todos os branches e nunca bloqueia: no `main` ele reporta injeções, headers ausentes e vazamentos; no `fixed`, restam apenas avisos de menor risco.
+O job `zap-dast` roda a partir do `scans` e nunca bloqueia: no `scans` ele reporta injeções, headers ausentes e vazamentos; no `fixed`, restam apenas avisos de menor risco.
+
+O ponto da progressão `main` -> `scans` -> `fix/*`: sem verificações no pipeline não há como impor controles; com elas, mesmo informativas, os problemas ficam visíveis e cada categoria pode passar a bloquear quando estiver limpa. Como a publicação é o último estágio, uma imagem com problemas em categoria bloqueante nunca chega ao registry.
 
 ## 6. Checklist rápido para um projeto novo
 
