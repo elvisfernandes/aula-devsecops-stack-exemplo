@@ -83,6 +83,7 @@ Cada ferramenta usada no exemplo é explicada (o que é e como funciona) nos arq
 - [SCA.md](SCA.md): Trivy (fs), pip-audit e npm audit
 - [SECRETS.md](SECRETS.md): Gitleaks, rotação e baseline
 - [IMAGEM-IAC.md](IMAGEM-IAC.md): Trivy (image), Hadolint e Checkov
+- [DAST.md](DAST.md): OWASP ZAP (baseline e API scan)
 - [PLATAFORMA.md](PLATAFORMA.md): GitLab CE, Runner, Docker-in-Docker e DefectDojo
 
 ## Pipeline (`.gitlab-ci.yml`)
@@ -95,6 +96,7 @@ Cada ferramenta usada no exemplo é explicada (o que é e como funciona) nos arq
 | build | `build-images` | Docker (dind) | Constrói as imagens |
 | image-scan | `trivy-image-*` | Trivy | CVEs do SO/pacotes e segredos nas camadas da imagem |
 | iac | `hadolint`, `checkov` | Hadolint, Checkov | Más práticas nos Dockerfiles |
+| dast | `zap-dast` | OWASP ZAP | Injeções, headers ausentes e vazamento de informação na aplicação em execução |
 | report | `defectdojo` | API do DefectDojo | Importa todos os relatórios (`reimport-scan`) |
 
 Cada branch vira um *engagement* no DefectDojo e cada ferramenta um *test*,
@@ -103,7 +105,7 @@ o que permite comparar a evolução entre os branches.
 ### Jobs bloqueantes
 
 Na `main` todos os jobs usam `allow_failure: true` (o pipeline termina em
-"passed with warnings"). A cada branch de correção, os jobs da categoria
+"passed with warnings"). O job `zap-dast` (DAST) é sempre informativo, pois exige triagem de falsos positivos. A cada branch de correção, os jobs da categoria
 corrigida **perdem** o `allow_failure` e passam a bloquear o pipeline: o merge
 só é possível se a categoria estiver limpa. Esse é o ponto central do shift-left.
 
