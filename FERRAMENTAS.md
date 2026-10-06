@@ -1,5 +1,7 @@
 # Ferramentas do projeto
 
+Para o panorama do processo (o que proteger em cada etapa), veja [DEVSECOPS.md](DEVSECOPS.md).
+
 Visão geral das ferramentas usadas neste exemplo de DevSecOps e onde cada uma atua no pipeline (`.gitlab-ci.yml`).
 
 | Categoria | Ferramenta | Documento | Estágio do pipeline |

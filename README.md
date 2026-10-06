@@ -77,6 +77,7 @@ na VM: basta ajustar `GITLAB_HOST` em `infra/.env`.
 
 Cada ferramenta usada no exemplo é explicada (o que é e como funciona) nos arquivos abaixo:
 
+- [DEVSECOPS.md](DEVSECOPS.md): o que proteger e verificar em cada etapa do ciclo DevSecOps
 - [FERRAMENTAS.md](FERRAMENTAS.md): visão geral, conceito de shift-left e política de bloqueio por branch
 - [SAST.md](SAST.md): Semgrep e Bandit
 - [SCA.md](SCA.md): Trivy (fs), pip-audit e npm audit
