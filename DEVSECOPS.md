@@ -1,8 +1,8 @@
 # DevSecOps: o que proteger em cada etapa
 
-Guia de apoio à aula e de referência para o aluno. Para cada etapa do ciclo de desenvolvimento, descreve **o que deve ser protegido**, **o que verificar**, **como automatizar** e **onde isso aparece neste projeto**.
+Guia de referência sobre segurança no ciclo de desenvolvimento. Para cada etapa do ciclo de desenvolvimento, descreve **o que deve ser protegido**, **o que verificar**, **como automatizar** e **onde isso aparece neste projeto**.
 
-> Para o detalhe de cada ferramenta, veja [FERRAMENTAS.md](FERRAMENTAS.md). Para a lista de vulnerabilidades do exemplo, veja o final do [README.md](README.md).
+> Para o detalhe de cada ferramenta, veja [FERRAMENTAS.md](FERRAMENTAS.md) e [DAST.md](DAST.md). Para a lista de vulnerabilidades do exemplo, veja o final do [README.md](README.md).
 
 ## 1. A ideia central
 
@@ -30,7 +30,7 @@ Planejar -> Codificar -> Commit -> Build -> Testar -> Release -> Implantar -> Op
 | Build / integração | Código próprio e dependências | SAST, SCA, licenças | Semgrep, Bandit, Trivy fs, pip-audit, npm audit |
 | Empacotamento | Imagem de container | Image scanning, lint de Dockerfile | Trivy image, Hadolint |
 | Infraestrutura como código | Configuração de ambiente | Scan de IaC e de compose/K8s | Checkov |
-| Testes | Aplicação em execução | DAST, testes de segurança, fuzzing | Fora do escopo do exemplo |
+| Testes | Aplicação em execução | DAST, testes de segurança, fuzzing | OWASP ZAP (job `zap-dast`) |
 | Release / implantação | Artefato e processo de entrega | Assinatura, SBOM, aprovação, segredos do CI | Variáveis mascaradas no GitLab |
 | Operação | Ambiente em execução | Hardening, mínimo privilégio, patches | Compose do branch `fixed` |
 | Monitoramento e resposta | Visibilidade e correção | Logs, alertas, gestão de vulnerabilidades | DefectDojo |
@@ -53,7 +53,7 @@ Planejar -> Codificar -> Commit -> Build -> Testar -> Release -> Implantar -> Op
 - Princípios: mínimo privilégio, falhar de forma segura, defesa em profundidade, segurança por padrão.
 - Referências: OWASP ASVS, OWASP Top 10, OWASP SAMM.
 
-**No projeto:** o exemplo é um CRUD sem autenticação, de propósito. Em um sistema real, isso seria uma decisão de design a ser justificada. Vale perguntar à turma: que ameaças existem para um cadastro público de sapatos?
+**No projeto:** o exemplo é um CRUD sem autenticação, de propósito. Em um sistema real, isso seria uma decisão de design a ser justificada. Uma modelagem de ameaças para este cadastro consideraria, por exemplo, a exposição pública sem autenticação, a alteração ou remoção de dados por qualquer pessoa e o abuso dos endpoints auxiliares (importação, exportação, ping, catálogo).
 
 ### 3.2 Codificação (ambiente do desenvolvedor)
 
@@ -156,7 +156,7 @@ Planejar -> Codificar -> Commit -> Build -> Testar -> Release -> Implantar -> Op
 - Testes automatizados de segurança como parte da suíte (por exemplo, "entrada maliciosa deve retornar 400").
 - Fuzzing e testes de carga para achar falhas de robustez.
 
-**No projeto:** o exemplo não inclui DAST. Seria o próximo passo natural: um job com OWASP ZAP contra o ambiente de teste.
+**No projeto:** o estágio `dast` do pipeline sobe a aplicação em um ambiente descartável (Docker-in-Docker, com as mesmas imagens geradas pelo `build-images`) e executa o OWASP ZAP em dois modos: `zap-baseline.py` (passivo, no frontend) e `zap-api-scan.py` (ativo, guiado por [dast/openapi.yaml](dast/openapi.yaml)). O job é informativo em todos os branches, pois o DAST exige triagem de falsos positivos. Os relatórios seguem para o DefectDojo. Veja [DAST.md](DAST.md).
 
 ### 3.8 Release e implantação
 
@@ -213,7 +213,9 @@ Planejar -> Codificar -> Commit -> Build -> Testar -> Release -> Implantar -> Op
 | `fix/sca` | Cadeia de suprimentos | Trivy fs, pip-audit e npm audit passam e bloqueiam |
 | `fix/secrets` | Repositório e credenciais | Gitleaks passa (com baseline) e bloqueia |
 | `fix/image` | Empacotamento e IaC | Trivy image, Hadolint e Checkov passam e bloqueiam |
-| `fixed` | Defesa em profundidade e operação | Tudo bloqueante, com validação, headers e hardening do ambiente |
+| `fixed` | Defesa em profundidade e operação | Tudo bloqueante, com validação, headers e hardening do ambiente. O DAST continua informativo e reporta bem menos alertas |
+
+O job `zap-dast` roda em todos os branches e nunca bloqueia: no `main` ele reporta injeções, headers ausentes e vazamentos; no `fixed`, restam apenas avisos de menor risco.
 
 ## 6. Checklist rápido para um projeto novo
 
@@ -226,7 +228,7 @@ Planejar -> Codificar -> Commit -> Build -> Testar -> Release -> Implantar -> Op
 - [ ] Imagem base atual e mínima, usuário não-root, `HEALTHCHECK`
 - [ ] Image scanning e lint de Dockerfile no pipeline
 - [ ] IaC verificado e ambiente com mínimo privilégio
-- [ ] DAST em ambiente de teste
+- [ ] DAST em ambiente de teste descartável (nunca em produção)
 - [ ] Segredos em cofre ou variáveis protegidas, com rotação
 - [ ] Logs sem dados sensíveis e alertas configurados
 - [ ] Achados centralizados e com responsável e prazo (DefectDojo)

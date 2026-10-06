@@ -143,7 +143,10 @@ def delete_shoe(id):
 
 @app.route("/api/shoes/import", methods=["POST"])
 def import_shoes():
-    items = yaml.safe_load(request.data)
+    try:
+        items = yaml.safe_load(request.data)
+    except yaml.YAMLError:
+        return jsonify(error="YAML inválido"), 400
     if not isinstance(items, list) or len(items) > 500:
         return jsonify(error="lista inválida"), 400
     validated = []
