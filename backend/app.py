@@ -54,20 +54,20 @@ def handle_error(exc):
 
 def validate_shoe(d):
     if not isinstance(d, dict):
-        return None, "corpo JSON inv?lido"
+        return None, "corpo JSON inválido"
     out = {}
     for field in ("brand", "model", "color"):
         v = d.get(field)
         if not isinstance(v, str) or not 1 <= len(v.strip()) <= 100:
-            return None, f"{field} inv?lido"
+            return None, f"{field} inválido"
         out[field] = v.strip()
     size = d.get("size")
     if isinstance(size, bool) or not isinstance(size, int) or not 15 <= size <= 60:
-        return None, "size inv?lido"
+        return None, "size inválido"
     out["size"] = size
     price = d.get("price")
     if isinstance(price, bool) or not isinstance(price, (int, float)) or not 0 < price < 100000:
-        return None, "price inv?lido"
+        return None, "price inválido"
     out["price"] = price
     return out, None
 
@@ -141,7 +141,7 @@ def delete_shoe(id):
 def import_shoes():
     items = yaml.safe_load(request.data)
     if not isinstance(items, list) or len(items) > 500:
-        return jsonify(error="lista inv?lida"), 400
+        return jsonify(error="lista inválida"), 400
     validated = []
     for raw in items:
         d, err = validate_shoe(raw)
