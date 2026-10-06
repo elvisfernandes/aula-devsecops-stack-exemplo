@@ -31,7 +31,7 @@ O DAST gera mais falsos positivos que as demais ferramentas, pois infere vulnera
 
 ## O que esperar em cada branch
 
-- **`main`:** alertas de risco alto e médio: SQL injection, injeção de comandos, SSTI, inclusão remota de arquivo, além de headers ausentes e vazamento de versão do servidor.
+- **`scans`:** (mesmo código da `main`) alertas de risco alto e médio: SQL injection, injeção de comandos, SSTI, inclusão remota de arquivo, além de headers ausentes e vazamento de versão do servidor.
 - **`fixed`:** bem menos alertas. Restam, principalmente, avisos de headers opcionais (`Permissions-Policy`, COEP), respostas 500 do endpoint `/api/catalog` (o catálogo externo é fictício) e eventuais falsos positivos.
 
 ## Atenção

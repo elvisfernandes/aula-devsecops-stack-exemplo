@@ -31,4 +31,4 @@ Nenhuma delas substitui testes dinâmicos (DAST) ou revisão humana; elas se com
 
 ## Política de bloqueio por branch
 
-Em `main` todos os jobs de segurança têm `allow_failure: true` (a pipeline mostra os problemas, mas passa). Cada branch `fix/*` torna bloqueantes os jobs da categoria que corrige; em `fixed` todos bloqueiam.
+A `main` não tem nenhum job de segurança: só `build-images` e `publish-images`. No branch `scans` todos os jobs de segurança têm `allow_failure: true` (a pipeline mostra os problemas, mas passa). Cada branch `fix/*` torna bloqueantes os jobs da categoria que corrige; em `fixed` todos bloqueiam.

@@ -1,103 +1,13 @@
+# Pipeline sem nenhuma verificação de segurança: apenas build e publicação.
+# Os branches seguintes (scans, fix/*) adicionam as verificações aos poucos.
 stages:
-  - sast
-  - sca
-  - secrets
   - build
-  - image-scan
-  - iac
-  - dast
-  - report
+  - publish
 
 variables:
-  GIT_DEPTH: "0"
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
 
-.report-artifacts: &report-artifacts
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - reports/
-
-.trivy:
-  image:
-    name: aquasec/trivy:latest
-    entrypoint: [""]
-  <<: *report-artifacts
-  before_script:
-    - mkdir -p reports
-
-# ---------------------------------------------------------------- SAST
-semgrep:
-  stage: sast
-  image: semgrep/semgrep:latest
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - >
-      semgrep scan --metrics=off --error
-      --config p/python --config p/flask --config p/javascript --config p/react
-      --config p/security-audit --config p/xss --config p/owasp-top-ten
-      --config semgrep/frontend.yml --exclude Dockerfile
-      --json --output reports/semgrep.json backend frontend/src
-
-bandit:
-  stage: sast
-  image: python:3.12-slim
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - pip install --no-cache-dir bandit
-    - bandit -r backend -ll -f json -o reports/bandit.json
-
-# ----------------------------------------------------------------- SCA
-trivy-fs:
-  stage: sca
-  extends: .trivy
-  allow_failure: true
-  script:
-    - >
-      trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1
-      --format json --output reports/trivy-fs.json .
-
-pip-audit:
-  stage: sca
-  image: python:3.12-slim
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - pip install --no-cache-dir pip-audit
-    - pip-audit -r backend/requirements.txt --no-deps --disable-pip -f json -o reports/pip-audit.json
-
-npm-audit:
-  stage: sca
-  image: node:20-alpine
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - cd frontend
-    - npm audit --audit-level=high --json > ../reports/npm-audit.json
-
-# ------------------------------------------------------------- SECRETS
-gitleaks:
-  stage: secrets
-  image:
-    name: ghcr.io/gitleaks/gitleaks:latest
-    entrypoint: [""]
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - >
-      gitleaks detect --source . --no-banner --redact --exit-code 1
-      --report-format json --report-path reports/gitleaks.json
-
-# --------------------------------------------------------------- BUILD
 build-images:
   stage: build
   image: docker:27
@@ -114,78 +24,22 @@ build-images:
     paths:
       - images/
 
-# --------------------------------------------------------- IMAGE SCAN
-trivy-image-backend:
-  stage: image-scan
-  extends: .trivy
-  needs: [build-images]
-  allow_failure: true
-  script:
-    - >
-      trivy image --input images/backend.tar --scanners vuln,secret
-      --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
-      --format json --output reports/trivy-image-backend.json
-
-trivy-image-frontend:
-  stage: image-scan
-  extends: .trivy
-  needs: [build-images]
-  allow_failure: true
-  script:
-    - >
-      trivy image --input images/frontend.tar --scanners vuln,secret
-      --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
-      --format json --output reports/trivy-image-frontend.json
-
-# ----------------------------------------------------------------- IaC
-hadolint:
-  stage: iac
-  image:
-    name: hadolint/hadolint:latest-debian
-    entrypoint: [""]
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - >
-      hadolint --failure-threshold warning --format json
-      backend/Dockerfile frontend/Dockerfile > reports/hadolint.json
-
-checkov:
-  stage: iac
-  image:
-    name: bridgecrew/checkov:latest
-    entrypoint: [""]
-  <<: *report-artifacts
-  allow_failure: true
-  script:
-    - mkdir -p reports
-    - checkov -d . --framework dockerfile --quiet -o json > reports/checkov.json
-
-# ------------------------------------------------------------------ DAST
-zap-dast:
-  stage: dast
+# --------------------------------------------------------------- PUBLISH
+# Publica as imagens no Container Registry do GitLab. Fica no último estágio:
+# só executa se todos os jobs bloqueantes anteriores passaram.
+publish-images:
+  stage: publish
   image: docker:27
   services:
-    - docker:27-dind
-  needs: [build-images]
-  allow_failure: true
+    - name: docker:27-dind
+      command: ["--insecure-registry=gitlab:5050"]
+  dependencies: [build-images]
   script:
-    - sh infra/scripts/dast.sh
-  artifacts:
-    when: always
-    expire_in: 1 week
-    paths:
-      - reports/zap-*.json
-
-# -------------------------------------------------------------- REPORT
-defectdojo:
-  stage: report
-  image:
-    name: curlimages/curl:latest
-    entrypoint: [""]
-  rules:
-    - if: $DD_URL && $DD_TOKEN
-      when: always
-  script:
-    - sh infra/scripts/upload-defectdojo.sh
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker load -i images/backend.tar
+    - docker load -i images/frontend.tar
+    - |
+      for svc in backend frontend; do
+        docker tag shoes-$svc:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA
+        docker push $CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA
+      done
