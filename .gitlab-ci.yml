@@ -32,7 +32,6 @@ semgrep:
   stage: sast
   image: semgrep/semgrep:latest
   <<: *report-artifacts
-  allow_failure: true
   script:
     - mkdir -p reports
     - >
@@ -46,7 +45,6 @@ bandit:
   stage: sast
   image: python:3.12-slim
   <<: *report-artifacts
-  allow_failure: true
   script:
     - mkdir -p reports
     - pip install --no-cache-dir bandit
