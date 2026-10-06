@@ -1,15 +1,15 @@
 import os
 
 DB_HOST = os.environ.get("DB_HOST", "db")
-DB_PORT = 5432
-DB_NAME = "shoes"
-DB_USER = "shoes_admin"
-DB_PASSWORD = "Sup3rS3cr3t!Pass2024"
+DB_PORT = int(os.environ.get("DB_PORT", "5432"))
+DB_NAME = os.environ.get("DB_NAME", "shoes")
+DB_USER = os.environ.get("DB_USER", "shoes_admin")
+DB_PASSWORD = os.environ["DB_PASSWORD"]
 
-AWS_ACCESS_KEY_ID = "AKIAQ3EGRXYZ7K2LMN4P"
-AWS_SECRET_ACCESS_KEY = "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"
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 
-CATALOG_API_KEY = "glpat-9Rt3LmXq7ZvB2NcY5HsK"
+CATALOG_API_KEY = os.environ.get("CATALOG_API_KEY", "")
 
 EXPORT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "exports")
 

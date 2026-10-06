@@ -1,7 +1,10 @@
 services:
   db:
     image: postgres:13
-    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
     ports:
       - "5432:5432"
     volumes:
@@ -11,6 +14,12 @@ services:
     build: ./backend
     environment:
       HOST: 0.0.0.0
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      CATALOG_API_KEY: ${CATALOG_API_KEY:-}
       CORS_ORIGINS: http://localhost:3000
     ports:
       - "5000:5000"
