@@ -17,8 +17,9 @@ problemas ainda durante o desenvolvimento.
 | CI/CD      | GitLab CE + GitLab Runner (executor Docker com dind) |
 | Gestão de vulnerabilidades | DefectDojo |
 
-A aplicação é um CRUD de sapatos (id, marca, modelo, tamanho, cor, preço), sem
-autenticação e sem armazenamento de imagens.
+A aplicação é um CRUD de sapatos (id, marca, modelo, tamanho, cor, preço, estoque), sem
+autenticação e sem armazenamento de imagens. Sapatos com estoque igual a zero não
+aparecem na listagem (o "Converse Chuck Taylor Limited" do seed é um deles).
 
 ```
 backend/                Flask + psycopg2
