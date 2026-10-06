@@ -1,0 +1,172 @@
+stages:
+  - sast
+  - sca
+  - secrets
+  - build
+  - image-scan
+  - iac
+  - report
+
+variables:
+  GIT_DEPTH: "0"
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+.report-artifacts: &report-artifacts
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - reports/
+
+.trivy:
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  <<: *report-artifacts
+  before_script:
+    - mkdir -p reports
+
+# ---------------------------------------------------------------- SAST
+semgrep:
+  stage: sast
+  image: semgrep/semgrep:latest
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - >
+      semgrep scan --metrics=off --error
+      --config p/python --config p/flask --config p/javascript --config p/react
+      --json --output reports/semgrep.json backend frontend/src
+
+bandit:
+  stage: sast
+  image: python:3.12-slim
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - pip install --no-cache-dir bandit
+    - bandit -r backend -ll -f json -o reports/bandit.json
+
+# ----------------------------------------------------------------- SCA
+trivy-fs:
+  stage: sca
+  extends: .trivy
+  allow_failure: true
+  script:
+    - >
+      trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1
+      --format json --output reports/trivy-fs.json .
+
+pip-audit:
+  stage: sca
+  image: python:3.12-slim
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - pip install --no-cache-dir pip-audit
+    - pip-audit -r backend/requirements.txt --no-deps --disable-pip -f json -o reports/pip-audit.json
+
+npm-audit:
+  stage: sca
+  image: node:20-alpine
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - cd frontend
+    - npm audit --audit-level=high --json > ../reports/npm-audit.json
+
+# ------------------------------------------------------------- SECRETS
+gitleaks:
+  stage: secrets
+  image:
+    name: ghcr.io/gitleaks/gitleaks:latest
+    entrypoint: [""]
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - >
+      gitleaks detect --source . --no-banner --redact --exit-code 1
+      --report-format json --report-path reports/gitleaks.json
+
+# --------------------------------------------------------------- BUILD
+build-images:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  script:
+    - mkdir -p images
+    - docker build -t shoes-backend:$CI_COMMIT_SHORT_SHA backend
+    - docker build -t shoes-frontend:$CI_COMMIT_SHORT_SHA frontend
+    - docker save -o images/backend.tar shoes-backend:$CI_COMMIT_SHORT_SHA
+    - docker save -o images/frontend.tar shoes-frontend:$CI_COMMIT_SHORT_SHA
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - images/
+
+# --------------------------------------------------------- IMAGE SCAN
+trivy-image-backend:
+  stage: image-scan
+  extends: .trivy
+  needs: [build-images]
+  allow_failure: true
+  script:
+    - >
+      trivy image --input images/backend.tar --scanners vuln,secret
+      --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+      --format json --output reports/trivy-image-backend.json
+
+trivy-image-frontend:
+  stage: image-scan
+  extends: .trivy
+  needs: [build-images]
+  allow_failure: true
+  script:
+    - >
+      trivy image --input images/frontend.tar --scanners vuln,secret
+      --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+      --format json --output reports/trivy-image-frontend.json
+
+# ----------------------------------------------------------------- IaC
+hadolint:
+  stage: iac
+  image:
+    name: hadolint/hadolint:latest-debian
+    entrypoint: [""]
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - >
+      hadolint --failure-threshold warning --format json
+      backend/Dockerfile frontend/Dockerfile > reports/hadolint.json
+
+checkov:
+  stage: iac
+  image:
+    name: bridgecrew/checkov:latest
+    entrypoint: [""]
+  <<: *report-artifacts
+  allow_failure: true
+  script:
+    - mkdir -p reports
+    - checkov -d . --framework dockerfile --quiet -o json > reports/checkov.json
+
+# -------------------------------------------------------------- REPORT
+defectdojo:
+  stage: report
+  image:
+    name: curlimages/curl:latest
+    entrypoint: [""]
+  rules:
+    - if: $DD_URL && $DD_TOKEN
+      when: always
+  script:
+    - sh infra/scripts/upload-defectdojo.sh
