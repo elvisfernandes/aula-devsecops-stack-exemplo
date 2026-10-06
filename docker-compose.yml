@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:13
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
       POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
@@ -29,7 +29,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       - backend
 
