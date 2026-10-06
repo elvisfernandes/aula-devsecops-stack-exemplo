@@ -13,7 +13,7 @@ set -a
 set +a
 
 GITLAB_PORT="${GITLAB_PORT:-8929}"
-GITLAB_PROJECT="${GITLAB_PROJECT:-shoes-app}"
+GITLAB_PROJECT="${GITLAB_PROJECT:-aula-devsecops-stack-exemplo}"
 GL_URL="http://localhost:${GITLAB_PORT}"
 COMPOSE="docker compose -f infra/gitlab/docker-compose.yml --env-file infra/.env"
 TOKEN_FILE="infra/.gitlab-token"
