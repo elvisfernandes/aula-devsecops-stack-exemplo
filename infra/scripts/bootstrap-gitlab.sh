@@ -48,6 +48,9 @@ else
   echo "$PAT" > "$TOKEN_FILE"
 fi
 
+echo "==> Aumentando o limite de artefatos para 2 GB (os .tar das imagens passam de 100 MB)"
+api -o /dev/null -X PUT "$GL_URL/api/v4/application/settings" --data "max_artifacts_size=2048"
+
 echo "==> Criando o projeto $GITLAB_PROJECT"
 if ! api -o /dev/null "$GL_URL/api/v4/projects/root%2F${GITLAB_PROJECT}" 2>/dev/null; then
   api -o /dev/null -X POST "$GL_URL/api/v4/projects" \
