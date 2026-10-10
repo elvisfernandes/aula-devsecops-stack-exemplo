@@ -1,0 +1,9 @@
+# Override usado pelo job "deploy" do pipeline: troca o build local pelas imagens
+# já construídas no CI (variável IMAGE_TAG = SHA curto do commit).
+services:
+  backend:
+    image: shoes-backend:${IMAGE_TAG}
+    restart: unless-stopped
+  frontend:
+    image: shoes-frontend:${IMAGE_TAG}
+    restart: unless-stopped
