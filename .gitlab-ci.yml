@@ -8,6 +8,7 @@ stages:
   - dast
   - report
   - publish
+  - deploy
 
 variables:
   GIT_DEPTH: "0"
@@ -210,3 +211,20 @@ publish-images:
         docker tag shoes-$svc:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA
         docker push $CI_REGISTRY_IMAGE/$svc:$CI_COMMIT_SHORT_SHA
       done
+
+# --------------------------------------------------------------- DEPLOY
+# Atualiza backend e frontend na própria VM usando o Docker do host
+# (o runner monta /var/run/docker.sock nos jobs). Executa em qualquer branch,
+# ao final do pipeline, para demonstrar a aplicação resultante.
+deploy:
+  stage: deploy
+  image: docker:27
+  dependencies: [build-images]
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+    IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  script:
+    - docker load -i images/backend.tar
+    - docker load -i images/frontend.tar
+    - docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d --no-build
+    - docker image prune -f
