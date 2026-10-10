@@ -56,7 +56,7 @@ export default function App() {
 
   return (
     <main>
-      <h1>Cadastro de Sapatos</h1>
+      <h1>Cadastro de Sapatos - aula DevSecOps</h1>
 
       <form onSubmit={onSubmit}>
         <input name="brand" placeholder="Marca" value={form.brand} onChange={onChange} required />
