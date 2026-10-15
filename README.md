@@ -85,6 +85,7 @@ Cada ferramenta usada no exemplo é explicada (o que é e como funciona) nos arq
 - [IMAGEM-IAC.md](IMAGEM-IAC.md): Trivy (image), Hadolint e Checkov
 - [DAST.md](DAST.md): OWASP ZAP (baseline e API scan)
 - [PLATAFORMA.md](PLATAFORMA.md): GitLab CE, Runner, Docker-in-Docker e DefectDojo
+- [THREAT-MODEL.md](THREAT-MODEL.md): modelagem de ameaças da aplicação, com DFD e análise STRIDE
 
 ## Pipeline (`.gitlab-ci.yml`)
 
