@@ -1,7 +1,8 @@
 #!/bin/sh
 # Scan DAST com OWASP ZAP contra a aplicação em execução.
 # Pensado para rodar no GitLab CI (imagem docker:27 + serviço dind), mas funciona
-# em qualquer host com Docker. Gera reports/zap-baseline.json e reports/zap-api.json.
+# em qualquer host com Docker. Gera reports/zap-baseline.{json,xml} e reports/zap-api.{json,xml}
+# (o DefectDojo só importa o relatório do ZAP em XML).
 #
 #   1. sobe o stack (db + backend + frontend) com o docker compose
 #   2. zap-baseline.py: spider + regras passivas no frontend (headers, cookies, CSP)
@@ -72,7 +73,9 @@ run_zap() {
   docker cp dast/. "$name":/zap/wrk/
   rc=0
   docker start -a "$name" || rc=$?
-  docker cp "$name":"/zap/wrk/$report" "reports/$report" || echo "[aviso] relatório $report não gerado"
+  for f in "$report" "${report%.json}.xml"; do
+    docker cp "$name":"/zap/wrk/$f" "reports/$f" || echo "[aviso] relatório $f não gerado"
+  done
   return "$rc"
 }
 
@@ -81,13 +84,13 @@ status=0
 echo "==> ZAP baseline (passivo) em $TARGET"
 rc=0
 run_zap zap-baseline zap-baseline.json \
-  zap-baseline.py -t "$TARGET" -J zap-baseline.json || rc=$?
+  zap-baseline.py -t "$TARGET" -J zap-baseline.json -x zap-baseline.xml || rc=$?
 [ "$rc" -le 2 ] || status=1
 
 echo "==> ZAP API scan (ativo) com dast/openapi.yaml"
 rc=0
 run_zap zap-api zap-api.json \
-  zap-api-scan.py -t openapi.yaml -f openapi -O "$TARGET" -J zap-api.json \
+  zap-api-scan.py -t openapi.yaml -f openapi -O "$TARGET" -J zap-api.json -x zap-api.xml \
   -z "-config scanner.maxScanDurationInMins=${API_SCAN_MINUTES}" || rc=$?
 [ "$rc" -le 2 ] || status=1
 

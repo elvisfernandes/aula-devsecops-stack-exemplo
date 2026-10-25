@@ -179,6 +179,7 @@ zap-dast:
     expire_in: 1 week
     paths:
       - reports/zap-*.json
+      - reports/zap-*.xml
 
 # -------------------------------------------------------------- REPORT
 defectdojo:
