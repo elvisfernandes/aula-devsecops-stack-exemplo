@@ -20,7 +20,7 @@ upload() {
   fi
 
   echo "[upload] $title ($scan_type)"
-  curl -sS --fail-with-body -X POST "$DD_URL/api/v2/reimport-scan/" \
+  if ! curl -sS --fail-with-body -X POST "$DD_URL/api/v2/reimport-scan/" \
     -H "Authorization: Token $DD_TOKEN" \
     -F "scan_type=$scan_type" \
     -F "file=@$file" \
@@ -33,8 +33,15 @@ upload() {
     -F "branch_tag=${CI_COMMIT_REF_NAME:-local}" \
     -F "commit_hash=${CI_COMMIT_SHA:-}" \
     -F "build_id=${CI_PIPELINE_ID:-}" \
-    -o /dev/null
+    -o /tmp/dd-response.txt; then
+    echo "[erro] falha ao enviar $title:" >&2
+    cat /tmp/dd-response.txt >&2 2>/dev/null || true
+    echo >&2
+    failures=$((failures + 1))
+  fi
 }
+
+failures=0
 
 upload "Semgrep JSON Report"          reports/semgrep.json              "Semgrep"
 upload "Bandit Scan"                  reports/bandit.json               "Bandit"
@@ -48,3 +55,5 @@ upload "Hadolint Dockerfile check"    reports/hadolint.json             "Hadolin
 upload "Checkov Scan"                 reports/checkov.json              "Checkov"
 upload "ZAP Scan"                     reports/zap-baseline.json         "ZAP Baseline"
 upload "ZAP Scan"                     reports/zap-api.json              "ZAP API"
+
+[ "$failures" -eq 0 ] || { echo "$failures upload(s) falharam" >&2; exit 1; }
