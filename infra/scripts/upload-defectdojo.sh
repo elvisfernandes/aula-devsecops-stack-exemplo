@@ -65,11 +65,34 @@ eng_json=$(curl -sS -G "$DD_URL/api/v2/engagements/" \
   --data-urlencode "limit=1" || true)
 eng_id=$(printf '%s' "$eng_json" | sed -n 's/.*"results":\[{"id":\([0-9]*\).*/\1/p')
 
+# Sem o metadado scm-type=gitlab, o DefectDojo monta links de arquivo inválidos para o GitLab.
+# O sufixo /- faz o link ficar em <projeto>/-/blob/<commit>/<arquivo>#L<linha>.
+prod_json=$(curl -sS -G "$DD_URL/api/v2/products/" \
+  -H "Authorization: Token $DD_TOKEN" \
+  --data-urlencode "name=$PRODUCT" \
+  --data-urlencode "limit=1" || true)
+prod_id=$(printf '%s' "$prod_json" | sed -n 's/.*"results":\[{"id":\([0-9]*\).*/\1/p')
+if [ -n "$prod_id" ]; then
+  has_meta=$(curl -sS -G "$DD_URL/api/v2/metadata/" \
+    -H "Authorization: Token $DD_TOKEN" \
+    --data-urlencode "product=$prod_id" \
+    --data-urlencode "name=scm-type" || true)
+  if ! printf '%s' "$has_meta" | grep -q '"count":[ ]*[1-9]'; then
+    curl -sS --fail-with-body -X POST "$DD_URL/api/v2/metadata/" \
+      -H "Authorization: Token $DD_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{\"product\":$prod_id,\"name\":\"scm-type\",\"value\":\"gitlab\"}" \
+      -o /dev/null || echo "[aviso] não foi possível definir scm-type no produto" >&2
+  fi
+else
+  echo "[aviso] produto '$PRODUCT' não encontrado; scm-type não definido" >&2
+fi
+
 if [ -n "$eng_id" ]; then
   if ! curl -sS --fail-with-body -X PATCH "$DD_URL/api/v2/engagements/$eng_id/" \
     -H "Authorization: Token $DD_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"build_id\":\"${CI_PIPELINE_ID:-}\",\"commit_hash\":\"${CI_COMMIT_SHA:-}\",\"branch_tag\":\"${CI_COMMIT_REF_NAME:-local}\",\"source_code_management_uri\":\"${CI_PROJECT_URL:-}\",\"description\":\"Pipeline ${CI_PIPELINE_URL:-local} (commit ${CI_COMMIT_SHORT_SHA:-})\"}" \
+    -d "{\"build_id\":\"${CI_PIPELINE_ID:-}\",\"commit_hash\":\"${CI_COMMIT_SHA:-}\",\"branch_tag\":\"${CI_COMMIT_REF_NAME:-local}\",\"source_code_management_uri\":\"${CI_PROJECT_URL:-}/-\",\"description\":\"Pipeline ${CI_PIPELINE_URL:-local} (commit ${CI_COMMIT_SHORT_SHA:-})\"}" \
     -o /dev/null; then
     echo "[aviso] não foi possível atualizar o engagement $eng_id" >&2
   fi
