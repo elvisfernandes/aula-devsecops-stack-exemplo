@@ -47,14 +47,15 @@ publish-images:
 
 # --------------------------------------------------------------- DEPLOY
 # Atualiza backend e frontend na própria VM usando o Docker do host
-# (o runner monta /var/run/docker.sock nos jobs). Executa em qualquer branch,
-# ao final do pipeline, para demonstrar a aplicação resultante.
+# (o runner monta o socket do host em /var/run/host-docker.sock; em outro caminho
+# para não conflitar com o /var/run/docker.sock do serviço dind). Executa em
+# qualquer branch, ao final do pipeline, para demonstrar a aplicação resultante.
 deploy:
   stage: deploy
   image: docker:27
   dependencies: [build-images]
   variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
+    DOCKER_HOST: unix:///var/run/host-docker.sock
     IMAGE_TAG: $CI_COMMIT_SHORT_SHA
   script:
     - docker load -i images/backend.tar
