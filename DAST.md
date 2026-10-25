@@ -20,7 +20,7 @@ O job `zap-dast` (estágio `dast`) executa [infra/scripts/dast.sh](infra/scripts
 1. Carrega as imagens geradas pelo job `build-images` (`needs`), de modo que o DAST testa o **mesmo artefato** que passou pelo image scanning.
 2. Sobe o stack com `docker compose` dentro do Docker-in-Docker.
 3. Espera `http://localhost:3000/api/shoes` responder.
-4. Executa o `zap-baseline.py` e o `zap-api-scan.py`, gerando `reports/zap-baseline.json` e `reports/zap-api.json`.
+4. Executa o `zap-baseline.py` e o `zap-api-scan.py`, gerando `reports/zap-baseline.{json,xml}` e `reports/zap-api.{json,xml}` (o DefectDojo importa o XML).
 5. Derruba o stack e falha o job se houver alerta de risco **alto** nos relatórios.
 
 Os relatórios são enviados ao DefectDojo (parser "ZAP Scan") pelo job `defectdojo`.

@@ -53,8 +53,8 @@ upload "Trivy Scan"                   reports/trivy-image-backend.json  "Trivy I
 upload "Trivy Scan"                   reports/trivy-image-frontend.json "Trivy Image - frontend"
 upload "Hadolint Dockerfile check"    reports/hadolint.json             "Hadolint"
 upload "Checkov Scan"                 reports/checkov.json              "Checkov"
-upload "ZAP Scan"                     reports/zap-baseline.json         "ZAP Baseline"
-upload "ZAP Scan"                     reports/zap-api.json              "ZAP API"
+upload "ZAP Scan"                     reports/zap-baseline.xml          "ZAP Baseline"
+upload "ZAP Scan"                     reports/zap-api.xml               "ZAP API"
 
 # O reimport grava build_id/commit_hash no Test; o Engagement é atualizado à parte.
 echo "[engagement] atualizando metadados do pipeline"
