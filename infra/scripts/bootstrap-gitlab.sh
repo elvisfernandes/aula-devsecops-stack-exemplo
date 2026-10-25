@@ -73,7 +73,7 @@ if ! docker exec gitlab-runner grep -q '\[\[runners\]\]' /etc/gitlab-runner/conf
     --docker-privileged \
     --docker-network-mode devsecops \
     --docker-volumes /cache \
-    --docker-volumes /var/run/docker.sock:/var/run/docker.sock
+    --docker-volumes /var/run/docker.sock:/var/run/host-docker.sock
 else
   echo "    runner já registrado"
 fi
