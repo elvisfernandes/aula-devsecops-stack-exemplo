@@ -56,4 +56,25 @@ upload "Checkov Scan"                 reports/checkov.json              "Checkov
 upload "ZAP Scan"                     reports/zap-baseline.json         "ZAP Baseline"
 upload "ZAP Scan"                     reports/zap-api.json              "ZAP API"
 
+# O reimport grava build_id/commit_hash no Test; o Engagement é atualizado à parte.
+echo "[engagement] atualizando metadados do pipeline"
+eng_json=$(curl -sS -G "$DD_URL/api/v2/engagements/" \
+  -H "Authorization: Token $DD_TOKEN" \
+  --data-urlencode "name=$ENGAGEMENT" \
+  --data-urlencode "product__name=$PRODUCT" \
+  --data-urlencode "limit=1" || true)
+eng_id=$(printf '%s' "$eng_json" | sed -n 's/.*"results":\[{"id":\([0-9]*\).*/\1/p')
+
+if [ -n "$eng_id" ]; then
+  if ! curl -sS --fail-with-body -X PATCH "$DD_URL/api/v2/engagements/$eng_id/" \
+    -H "Authorization: Token $DD_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"build_id\":\"${CI_PIPELINE_ID:-}\",\"commit_hash\":\"${CI_COMMIT_SHA:-}\",\"branch_tag\":\"${CI_COMMIT_REF_NAME:-local}\",\"source_code_management_uri\":\"${CI_PROJECT_URL:-}\",\"description\":\"Pipeline ${CI_PIPELINE_URL:-local} (commit ${CI_COMMIT_SHORT_SHA:-})\"}" \
+    -o /dev/null; then
+    echo "[aviso] não foi possível atualizar o engagement $eng_id" >&2
+  fi
+else
+  echo "[aviso] engagement '$ENGAGEMENT' não encontrado; metadados não atualizados" >&2
+fi
+
 [ "$failures" -eq 0 ] || { echo "$failures upload(s) falharam" >&2; exit 1; }
